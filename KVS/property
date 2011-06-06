@@ -1,0 +1,9 @@
+MiddleHost = localhost;
+MiddlePort = 8080;
+HostNum = 3;
+HostAddress1 = localhost;
+HostPort1 = 23000;
+HostAddress2 = localhost;
+HostPort2 = 23001;
+HostAddress3 = localhost;
+HostPort3 = 23002;
