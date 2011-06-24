@@ -9,6 +9,8 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import Common.Message;
+
 public class MsgClient {
 		Socket socket;
 		Listen listen;

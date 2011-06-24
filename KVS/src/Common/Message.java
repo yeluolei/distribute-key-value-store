@@ -1,4 +1,4 @@
-package Client;
+package Common;
 
 
 import java.io.Serializable;
@@ -8,9 +8,8 @@ import java.util.HashMap;
 public class Message implements Serializable{
 	public static int GET = 1;
 	public static int PUT = 2;
-	
-	int operation;
-	HashMap data;
+	private int operation;
+	private HashMap data;
 	public Message(){
 		operation = 0;
 		data = new HashMap();
