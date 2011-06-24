@@ -6,10 +6,11 @@ public class KvsClient {
 	public static KvsLib kvsLib;
 	
 	public KvsClient(){
-		msgClient = new MsgClient("localhost", 10086);
+		msgClient = new MsgClient("localhost", 8081);
 		kvsLib = new KvsLib();	
 	}
-	public static void main(){
+	@SuppressWarnings("static-access")
+	public static void main(String[] args){
 		KvsClient client = new KvsClient();
 		client.kvsLib.Put("john", "grammy".getBytes());
 		byte[] value = client.kvsLib.Get("john");
