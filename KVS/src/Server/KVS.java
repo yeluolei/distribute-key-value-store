@@ -56,7 +56,7 @@ public class KVS {
     }
     public byte[] Get(String key){
     	KVEntity entity = dao.kvEntityByKey.get(key);
-    	entity.Print();
+    	//entity.Print();
     	return entity.getValue();
     }
     public void close()throws DatabaseException {

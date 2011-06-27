@@ -30,6 +30,7 @@ public class KvsLib {
 		@SuppressWarnings("rawtypes")
 		HashMap data = new HashMap();
 		data.put("key", key);
+		msg.setData(data);
 		KvsClient.msgClient.SendMsg(msg);
 		// send msg
 		hasGet = 0;

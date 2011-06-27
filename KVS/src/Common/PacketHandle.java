@@ -9,9 +9,11 @@ import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 
+import Server.OperateMessage;
+
 
 public class PacketHandle {
-	public static DatagramPacket getDatagram(Message msg,int index){
+	public static DatagramPacket getDatagram(OperateMessage msg,int index){
 		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(5000);
 		try {
 			ObjectOutputStream os = new ObjectOutputStream(
@@ -31,13 +33,13 @@ public class PacketHandle {
 		return null;
 	}
 	
-	public static Message getMessage(DatagramPacket packet , byte[] recvBuf){
+	public static OperateMessage getMessage(DatagramPacket packet , byte[] recvBuf){
 		int byteCount = packet.getLength();
 		ByteArrayInputStream byteStream = new ByteArrayInputStream(recvBuf);
 		try {
 			ObjectInputStream is = new ObjectInputStream(
 					new BufferedInputStream(byteStream));
-			Message msg = (Message) is.readObject();
+			OperateMessage msg = (OperateMessage) is.readObject();
 			is.close();
 			return msg;
 		} catch (Exception e) {
