@@ -15,8 +15,7 @@ public class KvsClient {
 		client.kvsLib.Put("john", "grammy".getBytes());
 		byte[] value = client.kvsLib.Get("john");
 		System.out.print("key: john   value: ");
-		for(int i = 0; i < value.length; i++)
-			System.out.print((char)value[i]);
+		System.out.print(new String(value));
 		System.out.print("\n");
 	}
 }

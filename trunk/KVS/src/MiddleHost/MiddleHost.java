@@ -19,6 +19,8 @@ import java.util.Vector;
 
 import javax.sound.sampled.Port;
 
+import Server.OperateMessage;
+
 import Common.Configure;
 import Common.Message;
 import Common.PacketHandle;
@@ -38,7 +40,7 @@ public class MiddleHost {
 			serverSocket.setReuseAddress(true);
 			servernum = Integer.valueOf(Configure.getInstance().getValue("HostNum"));
 			servers = new Vector<MulticastSocket>();
-			for (int index = 1 ; index <= servernum ; index++)
+			for (int index = 0 ; index < servernum ; index++)
 			{
 				MulticastSocket multicastSocket = new MulticastSocket(
 						Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)));
@@ -85,7 +87,10 @@ public class MiddleHost {
 					int serverIndex = msg.getData().get("key").toString()
 							.hashCode()
 							% servernum;
-					DatagramPacket packet = PacketHandle.getDatagram(msg,serverIndex);
+					int seq = OperateMessage.getNextSeq();
+					OperateMessage message = new OperateMessage(OperateMessage.TODO,
+							msg,seq);
+					DatagramPacket packet = PacketHandle.getDatagram(message,serverIndex);
 					if (packet != null) {
 						// 发送到指定组
 						servers.get(serverIndex).send(packet);
@@ -97,15 +102,17 @@ public class MiddleHost {
 						byte[] recvBuf = new byte[5000];
 						packet = new DatagramPacket(recvBuf, recvBuf.length);
 						servers.get(serverIndex).receive(packet);
-						Message recvmsg = PacketHandle.getMessage(packet,
+						OperateMessage recvmsg = PacketHandle.getMessage(packet,
 								recvBuf);
-						System.out.println("Middle :" + recvmsg.getOperation() +" , " + recvmsg.getData());
 						// 判断是否已经
 						// 写回结果
-						toclient.writeObject(msg);
-						toclient.flush();
-						toclient.reset();
-						replied = true;
+						if (recvmsg.getType() == OperateMessage.REPLY &&
+								recvmsg.getSeq() == seq){
+							toclient.writeObject(recvmsg.getMsg());
+							toclient.flush();
+							toclient.reset();
+							replied = true;
+						}
 					}
 				}
 			} catch (IOException e) {

@@ -45,12 +45,14 @@ public class MsgServer{
 				DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
 				try{
 					groupSocket.receive(packet);
-					Message msg = PacketHandle.getMessage(packet, recvBuf);
-					System.out.println(serverIndex + " Receive: "+msg.getData().toString() + "\n");
-					if (msg != null){
-						RequestHandle requestHandle = new RequestHandle(msg);
-						requestHandle.start();
-						stop();
+					OperateMessage msg = PacketHandle.getMessage(packet, recvBuf);
+					
+					if (msg.getType() == OperateMessage.TODO){
+						System.out.println(serverIndex + " Receive: "+msg.getMsg().getData().toString() + "\n");
+						if (msg != null){
+							RequestHandle requestHandle = new RequestHandle(msg);
+							requestHandle.start();
+						}
 					}
 				}catch (Exception e) {
 					e.printStackTrace();
@@ -60,39 +62,43 @@ public class MsgServer{
 	 }
 	 
 	 class RequestHandle extends Thread{
-		private Message msg;
+		private OperateMessage msg;
 
-		public RequestHandle(Message msg) {
+		public RequestHandle(OperateMessage msg) {
 			this.msg = msg;
 		}
 
 		@SuppressWarnings("unchecked")
 		public void run() {
-			if (msg.getOperation() == Message.PUT) {
+			if (msg.getMsg().getOperation() == Message.PUT) {
 				@SuppressWarnings("rawtypes")
-				HashMap data = msg.getData();
+				HashMap data = msg.getMsg().getData();
 				KVSServer.kvs.Put((String) data.get("key"),
 						(byte[]) data.get("value"));
-				data.put("staatus", "put success");
-				msg.setData(data);
+				data.put("status", "success");
+				msg.getMsg().setData(data);
+				msg.setType(OperateMessage.REPLY);
 				try {
 					groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
-			if (msg.getOperation() == Message.GET) {
+			if (msg.getMsg().getOperation() == Message.GET) {
 				if (tokenIn){
 					@SuppressWarnings("rawtypes")
-					HashMap data = msg.getData();
+					HashMap data = msg.getMsg().getData();
 					@SuppressWarnings("unused")
 					byte[] value = KVSServer.kvs.Get((String) data.get("key"));
 					// if success
 					Message success = new Message();
-					data.put("value", data);
+					data.put("value", value);
 					success.setData(data);
+					
+					msg.setType(OperateMessage.REPLY);
+					msg.setMsg(success);
 					try {
-						groupSocket.send(PacketHandle.getDatagram(success,serverIndex));
+						groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

@@ -31,7 +31,7 @@ public class MsgClient {
 	    	}
 	    	catch(IOException e){e.printStackTrace();}
 	    	listen = new Listen();	
-	    	 listen.start();
+	    	listen.start();
 		}
 		
 		public void SendMsg(Message msg){

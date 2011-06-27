@@ -11,7 +11,7 @@ public class Message implements Serializable{
 	private int operation;
 	private HashMap data;
 	public Message(){
-		operation = 0;
+		operation = 1;
 		data = new HashMap();
 	}
 	public int getOperation() {
