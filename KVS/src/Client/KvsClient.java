@@ -14,8 +14,12 @@ public class KvsClient {
 		KvsClient client = new KvsClient();
 		client.kvsLib.Put("john", "grammy".getBytes());
 		byte[] value = client.kvsLib.Get("john");
+		byte[] value2 = client.kvsLib.Get("john");
 		System.out.print("key: john   value: ");
 		System.out.print(new String(value));
+		System.out.print("key: john   value: ");
+		System.out.print(new String(value2));
 		System.out.print("\n");
+		return;
 	}
 }

@@ -11,6 +11,9 @@ public class OperateMessage implements Serializable{
 	public static int HEART_BEAT = 4;
 	public static int RESTORE_OK = 5;
 	public static int RESTORE_DATA = 6;
+	public static int TOKEN_PASS = 7;
+	public static int PUT_OK = 8;
+	
 	public static int currentseq = 0;
 	private int type;
 	private Message msg;
