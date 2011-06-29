@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.OutputStream;
 import java.io.ObjectInputStream.GetField;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
@@ -21,13 +22,16 @@ import javax.sound.sampled.Port;
 
 import Server.OperateMessage;
 
+
 import Common.Configure;
 import Common.Message;
 import Common.PacketHandle;
 
 public class MiddleHost {
 	private Vector<MulticastSocket>servers = null;
+	private Vector<MasterClient> toMasters = null;
 	private int servernum = 0;
+	private static ServerSocket serverSocket;
 	public static void main(String[] args)
 	{
 		MiddleHost middleHost = new MiddleHost();
@@ -35,21 +39,18 @@ public class MiddleHost {
 	
 	public MiddleHost() {
 		try {
-			ServerSocket serverSocket = new ServerSocket(
+			serverSocket = new ServerSocket(
 					Integer.valueOf(Configure.getInstance().getValue("MiddlePort")));
 			serverSocket.setReuseAddress(true);
 			servernum = Integer.valueOf(Configure.getInstance().getValue("HostNum"));
-			servers = new Vector<MulticastSocket>();
+		//	servers = new Vector<MulticastSocket>();
+			toMasters = new Vector<MasterClient>();
 			for (int index = 0 ; index < servernum ; index++)
 			{
-				MulticastSocket multicastSocket = new MulticastSocket(
-						Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)));
-				//multicastSocket.setLoopbackMode(true);
-				InetAddress group = InetAddress.getByName(
-						Configure.getInstance().getValue("ServerGroup"+index));
-				
-				multicastSocket.joinGroup(group);
-				servers.add(multicastSocket);
+				MasterClient master = new MasterClient(
+						Configure.getInstance().getValue("Master"+index),
+						Integer.valueOf(Configure.getInstance().getValue("MasterPort"+index)));
+				toMasters.add(master);
 			}
 			
 			while (true) {
@@ -61,6 +62,7 @@ public class MiddleHost {
 			e.printStackTrace();
 		}
 	}
+	
 	
 	class HostConnect extends Thread{
 		private Socket socket;
@@ -92,12 +94,13 @@ public class MiddleHost {
 							msg,seq);
 					DatagramPacket packet = PacketHandle.getDatagram(message,serverIndex);
 					if (packet != null) {
-						// 发送到指定组
-						servers.get(serverIndex).send(packet);
+						// 发送到指定组-master
+						toMasters.get(serverIndex).SetHostClient(socket);
+						toMasters.get(serverIndex).SendMsg(message);
 					}
 
 					// 接收回应
-					boolean replied = false;
+				/*	boolean replied = false;
 					while (!replied) {
 						byte[] recvBuf = new byte[5000];
 						packet = new DatagramPacket(recvBuf, recvBuf.length);
@@ -113,7 +116,7 @@ public class MiddleHost {
 							toclient.reset();
 							replied = true;
 						}
-					}
+					}*/
 				}
 			} catch (IOException e) {
 				e.printStackTrace();

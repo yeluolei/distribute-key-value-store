@@ -15,8 +15,14 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Vector;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Handler;
+
+import Serveractivition.MultiMsg;
 
 import Common.Configure;
 import Common.Message;
@@ -27,6 +33,10 @@ public class MsgServer{
 	 private MulticastSocket groupSocket = null;
 	 private boolean tokenIn = false;
 	 private int serverIndex;
+	 private String hostname;               //
+	 private Vector<MemberInfo> membertable;//
+	 private boolean isMaster;
+	 
 	 public MsgServer(int index) throws IOException{
 		 serverIndex = index;
 		 groupSocket = new MulticastSocket(Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)));
@@ -34,8 +44,23 @@ public class MsgServer{
 		 InetAddress group = InetAddress.getByName(Configure.getInstance().getValue("ServerGroup"+index));
 		 groupSocket.joinGroup(group);
 		 tokenIn = true;
+		 
+		 // 检测member
+		 membertable = new Vector<MemberInfo>();//
 		 new MainServer().start();
+		 Timer timer1 = new Timer();
+	     timer1.schedule(new Detector(), 0, 3000);
+		 Timer timer2 = new Timer();
+	     timer2.schedule(new SendHeartBeat(), 0, 1000);
 	 }
+	 
+	 public void MulticastMsg(OperateMessage msg){
+		 try {
+				groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	 
 	 class MainServer extends Thread{
 		 public MainServer(){}
@@ -53,11 +78,67 @@ public class MsgServer{
 							RequestHandle requestHandle = new RequestHandle(msg);
 							requestHandle.start();
 						}
+					}else if (msg.getType()== OperateMessage.HEART_BEAT){ //
+						String name = (String) msg.getMsg().getData().get("name");  //
+						boolean alreadyIsMember = false;
+						for (int i = 0 ; i < membertable.size() ;i++){
+							if (membertable.get(i).getName().equals(name)){
+								if (membertable.get(i).getStatus() == MemberInfo.RESTORING){
+									break;
+								}
+								else if(membertable.get(i).getStatus() == MemberInfo.DYING) {
+									membertable.get(i).setStatus(MemberInfo.ACTIVE);
+									alreadyIsMember = true;
+									break;
+								}else if (membertable.get(i).getStatus() == MemberInfo.DIED) {
+									if (isMaster){
+										 new Restore().start();
+									}
+								}
+							}
+						}
+						
+						if (!alreadyIsMember){
+							MemberInfo memberInfo = new MemberInfo();
+							memberInfo.setName(name);
+							memberInfo.setStatus(MemberInfo.ACTIVE);
+							membertable.add(memberInfo);
+						}
+					}else if (msg.getType() == OperateMessage.RESTORE_OK) {
+						String name = (String) msg.getMsg().getData().get("name"); 
+						for (int i = 0 ; i < membertable.size() ;i++){
+							if (membertable.get(i).getName().equals(name)){
+									membertable.get(i).setStatus(MemberInfo.ACTIVE);
+									break;
+								}
+							}
+					}else if (msg.getType() == OperateMessage.RESTORE_DATA) {
+						ArrayList<Message> data = (ArrayList<Message>) msg.getMsg().getData().get("data");
+						for (int i = 0; i < data.size(); i++) {
+							KVSServer.kvs.Put((String)data.get(i).getData().get("key"), 
+									(byte[])data.get(i).getData().get("value"));
+						}
 					}
 				}catch (Exception e) {
 					e.printStackTrace();
 				}
 			 }
+		 }
+	 }
+	 
+	 class Restore extends Thread{
+		 public void run(){
+			 Message message = new Message();
+			 HashMap data = new HashMap();
+			 data.put("data", KVSServer.kvs.GetAll());
+			 message.setData(data);
+			 try {
+				groupSocket.send(PacketHandle.getDatagram(
+						 new OperateMessage(OperateMessage.RESTORE_DATA, message, 0),
+						 serverIndex));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		 }
 	 }
 	 
@@ -106,6 +187,40 @@ public class MsgServer{
 			}
 		}
 	}
+	 
+	 // 发送心跳检测信号
+	 class SendHeartBeat extends TimerTask{
+			@Override
+			public void run() {
+					HashMap data = new HashMap();
+					data.put("name",hostname);
+					Message message = new Message();
+					message.setData(data);
+					try {
+						groupSocket.send(PacketHandle.getDatagram(
+								new OperateMessage(OperateMessage.HEART_BEAT,message,0),
+								serverIndex));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+			}
+			
+		}
+	 
+	 // 每3秒钟检查一下
+	class Detector extends TimerTask{
+		@Override
+		public void run() {
+			for (int i = 0 ; i < membertable.size(); i++){
+				if (membertable.get(i).getStatus() == MemberInfo.DYING){
+					membertable.get(i).setStatus(MemberInfo.DIED);
+				}else if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
+					membertable.get(i).setStatus(MemberInfo.DYING);
+				}
+			}
+		}
+		
+	} 	 
 }
 
 //public class MsgServer extends ServerSocket {

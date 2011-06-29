@@ -1,17 +1,20 @@
 package Server;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 
+import Common.Message;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 
 
 public class KVS {	
-	
 	private Environment env;
     private EntityStore store;
     private KVEntityAccessor dao;
@@ -59,6 +62,27 @@ public class KVS {
     	//entity.Print();
     	return entity.getValue();
     }
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+	public ArrayList<Message> GetAll()
+    {
+		ArrayList<Message> result = new ArrayList<Message>();
+		EntityCursor<KVEntity> cursor = dao.kvEntityByKey.entities();
+
+		for (KVEntity entity = cursor.first(); entity != null; entity = cursor
+				.next()) {
+			Message temp = new Message();
+			temp.setOperation(Message.PUT);
+			HashMap data = new HashMap();
+			data.put("key", entity.key);
+			data.put("value", entity.value);
+			temp.setData(data);
+			result.add(temp);
+		}
+
+		return result;
+    }
+    
     public void close()throws DatabaseException {
     	store.close();
         env.close();

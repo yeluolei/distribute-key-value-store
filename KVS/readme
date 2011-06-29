@@ -6,6 +6,17 @@
 	最后运行kvsclient
 	
 	
+MiddleHost: 
+	MiddleHost: 和guest-client联系，处理请求
+	MasterClient：发送请求到特定master
+Server：
+	MasterMsgServer：只有master需要执行，和MiddleHost中的MasterClient联系，处理请求，执行read-any-write-all policy
+	MsgServer: 每个slave/master的处理put请求的类，对应一个group的multicast
+	
 下一步任务：
-	1.同一组多个server
-	2.组内探测，失败恢复
+	1.KVSServer中按配置初始化MsgServer, MasterMsgServer
+	2.配置文件中需要以某种方式写明每个group有几台机器，初始化MasterMsgServer中memberNum变量，用于判断write-all是否都成功返回
+	2.调试
+	
+	
+membertable存储了状态信息，可以在memberInfo类中加入别的信息
