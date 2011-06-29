@@ -26,13 +26,12 @@ public class MasterMsgServer extends ServerSocket {
 	List<CreateServerThread> servingThread = new ArrayList<CreateServerThread>();
 	NewClient new_client;
 	int memberNum;
-	boolean tokenIn;
 	HashMap putReply = new HashMap();
 	HashMap putClient = new HashMap();
 	
 	
 	
-    public MasterMsgServer(String addr,int port) throws IOException{
+    public MasterMsgServer(int port) throws IOException{
     	super(port);
     	new_client = new NewClient();
     	new_client.start();
@@ -58,8 +57,6 @@ public class MasterMsgServer extends ServerSocket {
     	}
     	
     }
-    
-    
     
     class NewClient extends Thread{
     	public NewClient(){}
@@ -115,7 +112,6 @@ public class MasterMsgServer extends ServerSocket {
     					}
     				}
     				if (msg.getMsg().getOperation() == Message.GET) {
-    					if (tokenIn){
     						@SuppressWarnings("rawtypes")
     						HashMap data = msg.getMsg().getData();
     						@SuppressWarnings("unused")
@@ -134,7 +130,6 @@ public class MasterMsgServer extends ServerSocket {
     						}
     					}
     				}
-    			}
     		}catch(Exception e){}
     	}
     	public void SendMsg(OperateMessage msg){ //send to client

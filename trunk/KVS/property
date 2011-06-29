@@ -16,3 +16,15 @@ ServerPort2 = 23002
 MiddlePort1 = 30000
 MiddlePort2 = 30001
 MiddlePort3 = 30002
+
+Master0=localhost
+MasterPort0=40000
+Master1=localhost
+MasterPort1=40001
+Master2=localhost
+MasterPort2=40002
+
+
+ServerGroup_0_DefaultMaster = ServerGroup_0_Host_0
+ServerGroup_1_DefaultMaster = ServerGroup_1_Host_0
+ServerGroup_2_DefaultMaster = ServerGroup_2_Host_0
