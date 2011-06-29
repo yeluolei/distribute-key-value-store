@@ -8,6 +8,9 @@ public class OperateMessage implements Serializable{
 	public static int REPLY = 1;
 	public static int TODO = 2;
 	public static int BACKUP = 3;
+	public static int HEART_BEAT = 4;
+	public static int RESTORE_OK = 5;
+	public static int RESTORE_DATA = 6;
 	public static int currentseq = 0;
 	private int type;
 	private Message msg;

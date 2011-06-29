@@ -93,7 +93,7 @@ public class Listen extends Thread{
         	    MultiMsg key = (MultiMsg)entry.getKey();
         	    Boolean val = (Boolean)entry.getValue();
         	    if(val == false){
-        	    	iter.remove();
+//        	    	iter.remove();
         	    	continue;
         	    }
         	    member.put(key, false);
