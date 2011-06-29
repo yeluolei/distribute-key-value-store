@@ -13,20 +13,19 @@ public class KVSServer {
 	
 	
 	public static void main(String[] args){
-		if (args.length != 4 || !"-h".equals(args[0])) {
+		if (args.length != 4) {
             System.err.println
                 ("Usage: java "  +
-                 " -h <envHome> -i <index>");
+                 "-i <groupindex> -h <hostindex>");
             System.exit(2);
         }
-		KVSServer server = new KVSServer(new File(args[1]),Integer.valueOf(args[3]));
+		KVSServer server = new KVSServer(Integer.valueOf(args[1]),Integer.valueOf(args[3]));
 	}
 	
-	public KVSServer(File home, int index){
-		
-		kvs = new KVS(home);
+	public KVSServer(int groupindex , int hostindex){
+		kvs = new KVS(new File("ServerGroup"+groupindex+"/"+"Host"+hostindex));
 		try {
-			msgServer = new MsgServer(index);
+			msgServer = new MsgServer(groupindex,hostindex);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

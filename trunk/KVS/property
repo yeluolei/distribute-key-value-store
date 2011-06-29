@@ -1,28 +1,18 @@
 MiddleHost = localhost
 MiddlePort = 8081
-HostNum = 3
+
+
+ServerGroupNum = 3
+
+
 ServerGroup0 = 239.1.1.1
 ServerPort0 = 23000
 ServerGroup1 = 239.1.1.2
 ServerPort1 = 23001
 ServerGroup2 = 239.1.1.3
 ServerPort2 = 23002
+
+
 MiddlePort1 = 30000
 MiddlePort2 = 30001
 MiddlePort3 = 30002
-
-
-ServerGroup0host0=s0h0;
-ServerGroup0host1=s0h1;
-ServerGroup0host2=s0h2;
-ServerGroup0host3=s0h3;
-
-ServerGroup1host0=s1h0;
-ServerGroup1host1=s1h1;
-ServerGroup1host2=s1h2;
-ServerGroup1host3=s1h3;
-
-ServerGroup2host0=s2h0;
-ServerGroup2host1=s2h1;
-ServerGroup2host2=s2h2;
-ServerGroup2host3=s2h3;

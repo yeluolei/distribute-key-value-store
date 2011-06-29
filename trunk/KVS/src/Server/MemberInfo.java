@@ -4,7 +4,7 @@ import java.beans.IntrospectionException;
 
 public class MemberInfo {
 	private String name;
-	private int    status;
+	private int status;
 	
 	static int ACTIVE = 1;
 	static int DIED = 2;

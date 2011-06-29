@@ -14,6 +14,13 @@ public class Message implements Serializable{
 		operation = 1;
 		data = new HashMap();
 	}
+	
+	
+	public void setValue(String key , Object value)
+	{
+		data.put(key, value);
+	}
+	
 	public int getOperation() {
 		return operation;
 	}

@@ -42,7 +42,7 @@ public class MiddleHost {
 			serverSocket = new ServerSocket(
 					Integer.valueOf(Configure.getInstance().getValue("MiddlePort")));
 			serverSocket.setReuseAddress(true);
-			servernum = Integer.valueOf(Configure.getInstance().getValue("HostNum"));
+			servernum = Integer.valueOf(Configure.getInstance().getValue("ServerGroupNum"));
 		//	servers = new Vector<MulticastSocket>();
 			toMasters = new Vector<MasterClient>();
 			for (int index = 0 ; index < servernum ; index++)
