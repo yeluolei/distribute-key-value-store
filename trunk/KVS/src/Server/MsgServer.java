@@ -262,7 +262,18 @@ public class MsgServer{
 	 
 	 public String getNextAviable() {
 		 // TODO complete this function 
-		 return membertable.get(1).getName();
+		 boolean ok = false;
+		 int i = 0;
+		 while(!ok){
+			 if (membertable.get(i).getStatus() == MemberInfo.ACTIVE){
+				 if(!membertable.get(i).getName().equals(hostname)){
+					 ok = true;
+					 return membertable.get(i).getName();
+				 } 
+			 }
+			 i++;
+		 }
+		 return membertable.get(0).getName();
 	}
 	 
 	 // ·¢ËÍĞÄÌø¼ì²âĞÅºÅ
