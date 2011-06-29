@@ -22,6 +22,8 @@ import java.util.Vector;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Handler;
 
+import javax.xml.crypto.Data;
+
 import Serveractivition.MultiMsg;
 
 import Common.Configure;
@@ -32,16 +34,19 @@ import Common.PacketHandle;
 public class MsgServer{
 	 private MulticastSocket groupSocket = null;
 	 private boolean tokenIn = false;
-	 private int serverIndex;
+	 private int groupIndex;
 	 private String hostname;               //
 	 private Vector<MemberInfo> membertable;//
 	 private boolean isMaster;
 	 
-	 public MsgServer(int index) throws IOException{
-		 serverIndex = index;
-		 groupSocket = new MulticastSocket(Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)));
+	 public MsgServer(int groupindex ,int hostindex) throws IOException{
+		 groupIndex = groupindex;
+		 this.hostname = "ServerGroup_"+groupindex+"_Host_"+hostindex;
+		 
+		 // º”»Îgroup
+		 groupSocket = new MulticastSocket(Integer.valueOf(Configure.getInstance().getValue("ServerPort"+groupindex)));
 		 //groupSocket.setLoopbackMode(true);
-		 InetAddress group = InetAddress.getByName(Configure.getInstance().getValue("ServerGroup"+index));
+		 InetAddress group = InetAddress.getByName(Configure.getInstance().getValue("ServerGroup"+groupindex));
 		 groupSocket.joinGroup(group);
 		 tokenIn = true;
 		 
@@ -56,11 +61,11 @@ public class MsgServer{
 	 
 	 public void MulticastMsg(OperateMessage msg){
 		 try {
-				groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
+				groupSocket.send(PacketHandle.getDatagram(msg,groupIndex));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		}
+	}
 	 
 	 class MainServer extends Thread{
 		 public MainServer(){}
@@ -73,7 +78,7 @@ public class MsgServer{
 					OperateMessage msg = PacketHandle.getMessage(packet, recvBuf);
 					
 					if (msg.getType() == OperateMessage.TODO){
-						System.out.println(serverIndex + " Receive: "+msg.getMsg().getData().toString() + "\n");
+						System.out.println(groupIndex + " Receive: "+msg.getMsg().getData().toString() + "\n");
 						if (msg != null){
 							RequestHandle requestHandle = new RequestHandle(msg);
 							requestHandle.start();
@@ -83,14 +88,15 @@ public class MsgServer{
 						boolean alreadyIsMember = false;
 						for (int i = 0 ; i < membertable.size() ;i++){
 							if (membertable.get(i).getName().equals(name)){
+								alreadyIsMember = true;
 								if (membertable.get(i).getStatus() == MemberInfo.RESTORING){
 									break;
 								}
 								else if(membertable.get(i).getStatus() == MemberInfo.DYING) {
 									membertable.get(i).setStatus(MemberInfo.ACTIVE);
-									alreadyIsMember = true;
 									break;
 								}else if (membertable.get(i).getStatus() == MemberInfo.DIED) {
+									membertable.get(i).setStatus(MemberInfo.RESTORING);
 									if (isMaster){
 										 new Restore().start();
 									}
@@ -118,6 +124,11 @@ public class MsgServer{
 							KVSServer.kvs.Put((String)data.get(i).getData().get("key"), 
 									(byte[])data.get(i).getData().get("value"));
 						}
+						System.out.println("\n*************\n Restore ok \n**************\n");
+						Message message = new Message();
+						message.setValue("name", hostname);
+						groupSocket.send(PacketHandle.getDatagram(
+								new OperateMessage(OperateMessage.RESTORE_OK,message , 0), groupIndex));
 					}
 				}catch (Exception e) {
 					e.printStackTrace();
@@ -129,13 +140,11 @@ public class MsgServer{
 	 class Restore extends Thread{
 		 public void run(){
 			 Message message = new Message();
-			 HashMap data = new HashMap();
-			 data.put("data", KVSServer.kvs.GetAll());
-			 message.setData(data);
+			 message.setValue("data", KVSServer.kvs.GetAll());
 			 try {
 				groupSocket.send(PacketHandle.getDatagram(
 						 new OperateMessage(OperateMessage.RESTORE_DATA, message, 0),
-						 serverIndex));
+						 groupIndex));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -156,11 +165,10 @@ public class MsgServer{
 				HashMap data = msg.getMsg().getData();
 				KVSServer.kvs.Put((String) data.get("key"),
 						(byte[]) data.get("value"));
-				data.put("status", "success");
-				msg.getMsg().setData(data);
+				msg.getMsg().setValue("status", "success");
 				msg.setType(OperateMessage.REPLY);
 				try {
-					groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
+					groupSocket.send(PacketHandle.getDatagram(msg,groupIndex));
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -179,7 +187,7 @@ public class MsgServer{
 					msg.setType(OperateMessage.REPLY);
 					msg.setMsg(success);
 					try {
-						groupSocket.send(PacketHandle.getDatagram(msg,serverIndex));
+						groupSocket.send(PacketHandle.getDatagram(msg,groupIndex));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -192,14 +200,12 @@ public class MsgServer{
 	 class SendHeartBeat extends TimerTask{
 			@Override
 			public void run() {
-					HashMap data = new HashMap();
-					data.put("name",hostname);
 					Message message = new Message();
-					message.setData(data);
+					message.setValue("name",hostname);
 					try {
 						groupSocket.send(PacketHandle.getDatagram(
 								new OperateMessage(OperateMessage.HEART_BEAT,message,0),
-								serverIndex));
+								groupIndex));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -211,7 +217,9 @@ public class MsgServer{
 	class Detector extends TimerTask{
 		@Override
 		public void run() {
+			System.out.println("\n\n--------------------------------------");
 			for (int i = 0 ; i < membertable.size(); i++){
+				System.out.println(membertable.get(i).getName()+"\t"+membertable.get(i).getStatus());
 				if (membertable.get(i).getStatus() == MemberInfo.DYING){
 					membertable.get(i).setStatus(MemberInfo.DIED);
 				}else if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {

@@ -23,7 +23,6 @@ import Common.PacketHandle;
 public class MasterMsgServer extends ServerSocket {
 	private int seq = 0;
 
-	//List<CreateServerThread> waitingThread = new ArrayList<CreateServerThread>();
 	List<CreateServerThread> servingThread = new ArrayList<CreateServerThread>();
 	NewClient new_client;
 	int memberNum;
