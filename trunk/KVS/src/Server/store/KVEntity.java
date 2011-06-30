@@ -1,4 +1,4 @@
-package Server;
+package Server.store;
 
 
 import com.sleepycat.persist.model.Entity;

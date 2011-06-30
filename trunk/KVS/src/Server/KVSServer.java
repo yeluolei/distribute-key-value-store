@@ -4,10 +4,12 @@ package Server;
 import java.io.File;
 import java.io.IOException;
 
+import Server.store.KVS;
+
 
 public class KVSServer {
 	public static KVS kvs;
-	public static MsgServer msgServer;
+	public static ServerHost msgServer;
 	
 	
 	public static void main(String[] args){
@@ -21,9 +23,10 @@ public class KVSServer {
 	}
 	
 	public KVSServer(int groupindex , int hostindex){
-		kvs = new KVS(new File("ServerGroup"+groupindex+"/"+"Host"+hostindex));
+		String file = "ServerGroup"+groupindex+"/"+"Host"+hostindex;
+		kvs = new KVS(new File(file));
 		try {
-			msgServer = new MsgServer(groupindex,hostindex);
+			msgServer = new ServerHost(groupindex,hostindex);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
