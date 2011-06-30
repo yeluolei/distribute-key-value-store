@@ -1,8 +1,9 @@
-package Client;
+package Interface;
 
 
 import java.util.HashMap;
 
+import Client.KvsClient;
 import Common.Message;
 
 

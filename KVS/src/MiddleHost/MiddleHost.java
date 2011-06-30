@@ -118,7 +118,7 @@ public class MiddleHost {
 					}
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("connecting closed !\n");
 				this.stop();
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();

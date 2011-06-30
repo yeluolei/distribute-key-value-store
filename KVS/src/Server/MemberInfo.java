@@ -1,7 +1,5 @@
 package Server;
 
-import java.beans.IntrospectionException;
-
 public class MemberInfo {
 	private String name;
 	private int status;

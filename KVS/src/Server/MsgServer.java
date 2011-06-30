@@ -20,16 +20,21 @@ import Common.PacketHandle;
 public class MsgServer{
 	 private MulticastSocket groupSocket = null;
 	 private boolean tokenIn = false;
-	 private int groupIndex;
-	 private int hostIndex;
-	 private String hostname;               //
-	 private Vector<MemberInfo> membertable;//
-	 private boolean isMaster;
-	 private HashMap puttaskinfo;
+	 private int groupIndex;                // witch group this server is belong to 
+	 @SuppressWarnings("unused")
+	 private int hostIndex;                  // the index in the group
+	 private String hostname;               // the name of this index
+	 private Vector<MemberInfo> membertable;// the member info of the group
+	 private boolean isMaster;              // if this server is master
+	 @SuppressWarnings("rawtypes")
+	 private HashMap puttaskinfo;           // to recode that all the "put" task has been done
+	 private int seq;
 	 
-	 public MsgServer(int groupindex ,int hostindex) throws IOException{
+	 @SuppressWarnings("rawtypes")
+	public MsgServer(int groupindex ,int hostindex) throws IOException{
 		 groupIndex = groupindex;
-		 hostindex = hostindex;
+		 hostIndex = hostindex;
+		 seq = 0;
 		 this.hostname = "ServerGroup_"+groupindex+"_Host_"+hostindex;
 		 
 		 // 加入group
@@ -71,7 +76,8 @@ public class MsgServer{
 	 
 	 class MainServer extends Thread{
 		 public MainServer(){}
-		 public void run(){
+		 @SuppressWarnings("unchecked")
+		public void run(){
 			 while (true){
 				byte[] recvBuf = new byte[5000];
 				DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
@@ -88,38 +94,45 @@ public class MsgServer{
 					}else if (msg.getType()== OperateMessage.HEART_BEAT){ //
 						String name = (String) msg.getMsg().getData().get("name");  //
 						boolean alreadyIsMember = false;
-						for (int i = 0 ; i < membertable.size() ;i++){
-							if (membertable.get(i).getName().equals(name)){
-								alreadyIsMember = true;
-								if (membertable.get(i).getStatus() == MemberInfo.RESTORING){
-									break;
-								}
-								else if(membertable.get(i).getStatus() == MemberInfo.DYING) {
-									membertable.get(i).setStatus(MemberInfo.ACTIVE);
-									break;
-								}else if (membertable.get(i).getStatus() == MemberInfo.DIED) {
-									membertable.get(i).setStatus(MemberInfo.RESTORING);
-									if (isMaster){
-										 new Restore(membertable.get(i).getName()).start();
+						synchronized (membertable) {
+							for (int i = 0; i < membertable.size(); i++) {
+								if (membertable.get(i).getName().equals(name)) {
+									alreadyIsMember = true;
+									if (membertable.get(i).getStatus() == MemberInfo.RESTORING) {
+										break;
+									} else if (membertable.get(i).getStatus() == MemberInfo.DYING) {
+										membertable.get(i).setStatus(
+												MemberInfo.ACTIVE);
+										break;
+									} else if (membertable.get(i).getStatus() == MemberInfo.DIED) {
+										if (isMaster) {
+											new Restore(membertable.get(i)
+													.getName()).start();
+										}
+										membertable.get(i).setStatus(
+												MemberInfo.RESTORING);
 									}
 								}
 							}
-						}
-						
-						if (!alreadyIsMember){
-							MemberInfo memberInfo = new MemberInfo();
-							memberInfo.setName(name);
-							memberInfo.setStatus(MemberInfo.ACTIVE);
-							membertable.add(memberInfo);
+
+							if (!alreadyIsMember) {
+								MemberInfo memberInfo = new MemberInfo();
+								memberInfo.setName(name);
+								memberInfo.setStatus(MemberInfo.ACTIVE);
+								membertable.add(memberInfo);
+							}
 						}
 					}else if (msg.getType() == OperateMessage.RESTORE_OK) {
 						String name = (String) msg.getMsg().getData().get("name"); 
-						for (int i = 0 ; i < membertable.size() ;i++){
-							if (membertable.get(i).getName().equals(name)){
-									membertable.get(i).setStatus(MemberInfo.ACTIVE);
+						synchronized (membertable) {
+							for (int i = 0; i < membertable.size(); i++) {
+								if (membertable.get(i).getName().equals(name)) {
+									membertable.get(i).setStatus(
+											MemberInfo.ACTIVE);
 									break;
 								}
 							}
+						}
 					}else if (msg.getType() == OperateMessage.RESTORE_DATA) {
 						if (msg.getMsg().getData().get("name").equals(hostname)){
 							ArrayList<Message> data = (ArrayList<Message>) msg
@@ -166,23 +179,21 @@ public class MsgServer{
 		 }
 	 }
 	 
-	 
+	 // get the number of active member
 	 private int getLiveMemberNum(){
 		 int num = 0;
-		 for (int i = 0 ; i < membertable.size() ;i++){
-			 if (membertable.get(i).getStatus() == MemberInfo.ACTIVE){
-				 num++;
-			 }
+		 synchronized (membertable) {
+			for (int i = 0; i < membertable.size(); i++) {
+				if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
+					num++;
+				}
+			}
 		 }
 		 return num;
 	 }
 	 
-	 class Master extends Thread{
-		 public Master() {
-			
-		}
-	 }
 	 
+	 // a restore task , used only by the master
 	 class Restore extends Thread{
 		 private String name;
 		 public Restore(String name){
@@ -214,6 +225,13 @@ public class MsgServer{
 
 		@SuppressWarnings("unchecked")
 		public void run() {
+			while (seq != msg.getSeq()) {
+				try {
+					sleep(100);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 			if (msg.getMsg().getOperation() == Message.PUT) {
 				@SuppressWarnings("rawtypes")
 				HashMap data = msg.getMsg().getData();
@@ -223,6 +241,7 @@ public class MsgServer{
 				msg.setType(OperateMessage.PUT_OK);
 				try {
 					groupSocket.send(PacketHandle.getDatagram(msg,groupIndex));
+					Addseq();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -233,7 +252,6 @@ public class MsgServer{
 				if (tokenIn){
 					@SuppressWarnings("rawtypes")
 					HashMap data = msg.getMsg().getData();
-					@SuppressWarnings("unused")
 					byte[] value = KVSServer.kvs.Get((String) data.get("key"));
 					// if success
 					Message success = new Message();
@@ -253,27 +271,31 @@ public class MsgServer{
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					
+					Addseq();
 					System.out.println(hostname+" : handle get OK!\n");
 				}
 			}
 		}
 	}
 	 
+	 
+	 // get the next aviable member to pass the token 
 	 public String getNextAviable() {
 		 // TODO complete this function 
 		 boolean ok = false;
 		 int i = 0;
-		 while(!ok){
-			 if (membertable.get(i).getStatus() == MemberInfo.ACTIVE){
-				 if(!membertable.get(i).getName().equals(hostname)){
-					 ok = true;
-					 return membertable.get(i).getName();
-				 } 
-			 }
-			 i++;
+		 synchronized (membertable) {
+			while (!ok) {
+				if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
+					if (!membertable.get(i).getName().equals(hostname)) {
+						ok = true;
+						return membertable.get(i).getName();
+					}
+				}
+				i++;
+			}
+			return membertable.get(0).getName();
 		 }
-		 return membertable.get(0).getName();
 	}
 	 
 	 // 发送心跳检测信号
@@ -297,14 +319,22 @@ public class MsgServer{
 		@Override
 		public void run() {
 			//System.out.println("\n\n--------------------------------------");
-			for (int i = 0 ; i < membertable.size(); i++){
-				//System.out.println(membertable.get(i).getName()+"\t"+membertable.get(i).getStatus());
-				if (membertable.get(i).getStatus() == MemberInfo.DYING){
-					membertable.get(i).setStatus(MemberInfo.DIED);
-				}else if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
-					membertable.get(i).setStatus(MemberInfo.DYING);
+			synchronized (membertable) {
+				for (int i = 0; i < membertable.size(); i++) {
+					// System.out.println(membertable.get(i).getName()+"\t"+membertable.get(i).getStatus());
+					if (membertable.get(i).getStatus() == MemberInfo.DYING) {
+						membertable.get(i).setStatus(MemberInfo.DIED);
+					} else if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
+						membertable.get(i).setStatus(MemberInfo.DYING);
+					}
 				}
 			}
 		}
-	} 	 
+	}
+	
+	private void Addseq(){
+		synchronized (this) {
+			seq = (seq+1)%200;	
+		}
+	}
 }
