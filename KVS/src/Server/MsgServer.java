@@ -12,6 +12,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import Server.model.MemberInfo;
+
 import Common.Configure;
 import Common.Message;
 import Common.PacketHandle;
@@ -19,10 +21,10 @@ import Common.PacketHandle;
 
 public class MsgServer{
 	 private MulticastSocket groupSocket = null;
-	 private boolean tokenIn = false;
+//	 private boolean tokenIn = false;
 	 private int groupIndex;                // witch group this server is belong to 
 	 @SuppressWarnings("unused")
-	 private int hostIndex;                  // the index in the group
+	 private int hostIndex;                 // the index in the group
 	 private String hostname;               // the name of this index
 	 private Vector<MemberInfo> membertable;// the member info of the group
 	 private boolean isMaster;              // if this server is master
@@ -37,11 +39,7 @@ public class MsgServer{
 		 seq = 0;
 		 this.hostname = "ServerGroup_"+groupindex+"_Host_"+hostindex;
 		 
-		 // 加入group
-		 groupSocket = new MulticastSocket(Integer.valueOf(Configure.getInstance().getValue("ServerPort"+groupindex)));
-		 //groupSocket.setLoopbackMode(true);
-		 InetAddress group = InetAddress.getByName(Configure.getInstance().getValue("ServerGroup"+groupindex));
-		 groupSocket.joinGroup(group);
+
 		 
 		 
 		 // check if it's a master
@@ -49,7 +47,7 @@ public class MsgServer{
 			 //new MasterMsgServer(Integer.valueOf(
 			 //		 Configure.getInstance().getValue("MasterPort"+hostindex)));
 			 System.out.println(hostname + " is master!\n\n");
-			 tokenIn = true;
+//			 tokenIn = true;
 			 puttaskinfo = new HashMap();
 			 isMaster = true;
 		 }
@@ -85,13 +83,14 @@ public class MsgServer{
 					groupSocket.receive(packet);
 					OperateMessage msg = PacketHandle.getMessage(packet, recvBuf);
 					
-					if (msg.getType() == OperateMessage.TODO){
-						System.out.println(groupIndex + " Receive: "+msg.getMsg().getData().toString() + "\n");
-						if (msg != null){
-							RequestHandle requestHandle = new RequestHandle(msg);
-							requestHandle.start();
-						}
-					}else if (msg.getType()== OperateMessage.HEART_BEAT){ //
+//					if (msg.getType() == OperateMessage.TODO){
+//						System.out.println(groupIndex + " Receive: "+msg.getMsg().getData().toString() + "\n");
+//						if (msg != null){
+//							RequestHandle requestHandle = new RequestHandle(msg);
+//							requestHandle.start();
+//						}
+//					}else 
+					if (msg.getType()== OperateMessage.HEART_BEAT){ //
 						String name = (String) msg.getMsg().getData().get("name");  //
 						boolean alreadyIsMember = false;
 						synchronized (membertable) {
@@ -151,12 +150,14 @@ public class MsgServer{
 											OperateMessage.RESTORE_OK, message,
 											0), groupIndex));
 						}
-					}else if (msg.getType() == OperateMessage.TOKEN_PASS) {
-						if (msg.getMsg().getData().get("next").equals(hostname)){
-							tokenIn = true;
-							System.out.println(hostname + " get the token!\n");
-						}
-					}else if (msg.getType() == OperateMessage.PUT_OK) {
+					}
+//					else if (msg.getType() == OperateMessage.TOKEN_PASS) {
+//						if (msg.getMsg().getData().get("next").equals(hostname)){
+//							tokenIn = true;
+//							System.out.println(hostname + " get the token!\n");
+//						}
+//					}
+					else if (msg.getType() == OperateMessage.PUT_OK) {
 						if (isMaster){
 							int time = 0;
 							if (puttaskinfo.get(msg.getSeq())!= null){
@@ -249,7 +250,6 @@ public class MsgServer{
 				System.out.println(hostname+" : handle Put OK!\n");
 			}
 			if (msg.getMsg().getOperation() == Message.GET) {
-				if (tokenIn){
 					@SuppressWarnings("rawtypes")
 					HashMap data = msg.getMsg().getData();
 					byte[] value = KVSServer.kvs.Get((String) data.get("key"));
@@ -262,41 +262,40 @@ public class MsgServer{
 					msg.setMsg(success);
 					try {
 						groupSocket.send(PacketHandle.getDatagram(msg,groupIndex));
-						tokenIn = false;
-						Message tokenPassMessage = new Message();
-						// Here need to get the next member
-						tokenPassMessage.setValue("next", getNextAviable());
-						groupSocket.send(PacketHandle.getDatagram(new OperateMessage(OperateMessage.TOKEN_PASS,
-								tokenPassMessage, 0),groupIndex));
+//						Message tokenPassMessage = new Message();
+//						// Here need to get the next member
+//						tokenPassMessage.setValue("next", getNextAviable());
+//						groupSocket.send(PacketHandle.getDatagram(new OperateMessage(OperateMessage.TOKEN_PASS,
+//								tokenPassMessage, 0),groupIndex));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 					Addseq();
 					System.out.println(hostname+" : handle get OK!\n");
-				}
+				
 			}
 		}
 	}
 	 
 	 
 	 // get the next aviable member to pass the token 
-	 public String getNextAviable() {
-		 // TODO complete this function 
-		 boolean ok = false;
-		 int i = 0;
-		 synchronized (membertable) {
-			while (!ok) {
-				if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
-					if (!membertable.get(i).getName().equals(hostname)) {
-						ok = true;
-						return membertable.get(i).getName();
-					}
-				}
-				i++;
-			}
-			return membertable.get(0).getName();
-		 }
-	}
+//	 public String getNextAviable() {
+//		 // TODO complete this function 
+//		 boolean ok = false;
+//		 int i = 0;
+//		 synchronized (membertable) {
+//			while (!ok) {
+//				if (membertable.get(i).getStatus() == MemberInfo.ACTIVE) {
+//					if (!membertable.get(i).getName().equals(hostname)) {
+//						ok = true;
+//						return membertable.get(i).getName();
+//					}
+//				}
+//				i++;
+//			}
+//			return membertable.get(0).getName();
+//		 }
+//	}
 	 
 	 // 发送心跳检测信号
 	 class SendHeartBeat extends TimerTask{

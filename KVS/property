@@ -1,8 +1,10 @@
 MiddleHost = localhost
 MiddlePort = 8081
+MiddleServerPort=8082
 
 
-ServerGroupNum = 3
+
+ServerGroupNum = 1
 
 
 ServerGroup0 = 239.1.1.1
@@ -28,3 +30,34 @@ MasterPort2=40002
 ServerGroup_0_DefaultMaster = ServerGroup_0_Host_0
 ServerGroup_1_DefaultMaster = ServerGroup_1_Host_0
 ServerGroup_2_DefaultMaster = ServerGroup_2_Host_0
+
+ServerGroup_0_Host_0_Addr=localhost
+ServerGroup_0_Host_0_Port=40000
+ServerGroup_0_Host_1_Addr=localhost
+ServerGroup_0_Host_1_Port=40001
+ServerGroup_0_Host_2_Addr=localhost
+ServerGroup_0_Host_2_Port=40002
+ServerGroup_0_Host_3_Addr=localhost
+ServerGroup_0_Host_3_Port=40003
+ServerGroup_0_Num = 4
+
+
+ServerGroup_1_Host_0_Addr=localhost
+ServerGroup_1_Host_0_Port=40010
+ServerGroup_1_Host_1_Addr=localhost
+ServerGroup_1_Host_1_Port=40011
+ServerGroup_1_Host_2_Addr=localhost
+ServerGroup_1_Host_2_Port=40012
+ServerGroup_1_Host_3_Addr=localhost
+ServerGroup_1_Host_3_Port=40013
+ServerGroup_1_Num = 4
+
+ServerGroup_2_Host_0_Addr=localhost
+ServerGroup_2_Host_0_Port=40020
+ServerGroup_2_Host_1_Addr=localhost
+ServerGroup_2_Host_1_Port=40021
+ServerGroup_2_Host_2_Addr=localhost
+ServerGroup_2_Host_2_Port=40022
+ServerGroup_2_Host_3_Addr=localhost
+ServerGroup_2_Host_3_Port=40023
+ServerGroup_2_Num = 4

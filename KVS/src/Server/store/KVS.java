@@ -1,4 +1,4 @@
-package Server;
+package Server.store;
 
 import java.io.File;
 import java.util.ArrayList;

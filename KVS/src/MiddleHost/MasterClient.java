@@ -21,26 +21,32 @@ public class MasterClient { // middlehost use it to send request to master
 	OutputStream outputStream;
 	ObjectOutputStream dos;
 
-	Socket hostClient;
+	int group;
+	int index;
+	String serverName;
+	int port;
 
-	public MasterClient(String serverName, int port) {
+
+	public MasterClient(String serverName, int port, int group, int index){
+		this.serverName = serverName;
+		this.port = port;
+		this.group = group;
+		this.index = index;
 		try {
 			InetAddress address = InetAddress.getByName(serverName);
 			socket = new Socket(address, port);
 			outputStream = socket.getOutputStream();
 			dos = new ObjectOutputStream(outputStream);
-			is = socket.getInputStream();
-			dis = new ObjectInputStream(is);
+			//is = socket.getInputStream();
+			dis = new ObjectInputStream(socket.getInputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		listen = new Listen();
 		listen.start();
 	}
-
-	void SetHostClient(Socket client) {
-		this.hostClient = client;
-	}
+	
+	
 
 	public void SendMsg(OperateMessage msg) {
 		try {
@@ -50,20 +56,6 @@ public class MasterClient { // middlehost use it to send request to master
 		} catch (Exception e) {
 			System.out.println("send message failure");
 			e.printStackTrace();
-		}
-	}
-
-	public void SendToClient(OperateMessage msg) { // send to hostclient of this
-													// request
-		OutputStream outputStream;
-		ObjectOutputStream dos;
-		try {
-			outputStream = hostClient.getOutputStream();
-			dos = new ObjectOutputStream(outputStream);
-			dos.writeObject(msg);
-			dos.flush();
-			dos.reset();
-		} catch (IOException ex) {
 		}
 	}
 
@@ -82,7 +74,7 @@ public class MasterClient { // middlehost use it to send request to master
 					// if msg tells the failure of the master, do something
 
 					// if msg is the reply of put/get, send it to guest-client
-					SendToClient(msg);
+					Frontend.middleHost.PutNewReply(msg);
 
 				}
 			} catch (Exception e) {

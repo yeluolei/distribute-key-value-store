@@ -1,131 +1,144 @@
 package MiddleHost;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.locks.ReentrantLock;
 
 import Common.Configure;
 import Common.Message;
 import Common.PacketHandle;
+import MiddleHost.NewNodeServer.AcceptThread;
+import MiddleHost.NewNodeServer.CreateServerThread;
 import Server.OperateMessage;
 
-public class MiddleHost {
-	private Vector<MulticastSocket>groups = null;
-//	private Vector<MasterClient> toMasters = null;
-	private int groupnum = 0;
-	private static ServerSocket serverSocket;
-	public static void main(String[] args)
-	{
-		MiddleHost middleHost = new MiddleHost();
-	}
-	
-	public MiddleHost() {
-		try {
-			serverSocket = new ServerSocket(
-					Integer.valueOf(Configure.getInstance().getValue("MiddlePort")));
-			serverSocket.setReuseAddress(true);
-			groupnum = Integer.valueOf(Configure.getInstance().getValue("ServerGroupNum"));
-			groups = new Vector<MulticastSocket>();
-//			toMasters = new Vector<MasterClient>();
-			for (int index = 0 ; index < groupnum ; index++)
-			{
-/*				MasterClient master = new MasterClient(
-						Configure.getInstance().getValue("Master"+index),
-						Integer.valueOf(Configure.getInstance().getValue("MasterPort"+index)));
-				toMasters.add(master);*/
-				 MulticastSocket multicastSocket = new MulticastSocket(
-                          Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)));
-				 InetAddress group = InetAddress.getByName(
-                          Configure.getInstance().getValue("ServerGroup"+index));
-          
-				 multicastSocket.joinGroup(group);
-				 groups.add(multicastSocket);
-			}
-			
-			System.out.println("Middle Host Started OK!\n");
-			
-			while (true) {
-				Socket clientSocket = serverSocket.accept();
-				HostConnect hostConnect = new HostConnect(clientSocket);
-				hostConnect.start();
-			}
-		} catch (IOException e) {
+public class MiddleHost extends ServerSocket {
+	AcceptThread acceptThread;
+	//private MasterClient[][] toMasters;
+	private ArrayList<ArrayList<MasterClient>> toMasters;
+	//private static ServerSocket serverSocket;
+	private Vector<OperateMessage> replyMsg;	
+	private ReplyGuestThread replyGuest;	
+	public MiddleHost(int port)throws IOException{
+		super(port);
+		replyMsg = new Vector<OperateMessage>();
+		acceptThread = new AcceptThread();
+		acceptThread.start();
+		try {	
+			int groupnum = Integer.valueOf(Configure.getInstance().getValue("ServerGroupNum"));
+			toMasters = new ArrayList<ArrayList<MasterClient>>();
+			for (int index = 0 ; index < groupnum ; index++){
+				ArrayList<MasterClient> groupClients = new ArrayList<MasterClient>();
+				toMasters.add(groupClients);
+				//Integer.valueOf(Configure.getInstance().getValue("ServerPort"+index)
+				int num = Integer.valueOf(
+						Configure.getInstance().getValue("ServerGroup_" + index + "_Num"));
+				//toMasters[index] = new MasterClient[num];
+				for(int j = 0; j < num; j++){
+					String ip = Configure.getInstance().getValue("ServerGroup_" + index 
+							+ "_Host_" + j +  "_Addr").toString();
+					int sPort = Integer.valueOf(Configure.getInstance().getValue("ServerGroup_" + index 
+							+ "_Host_" + j +  "_Port"));
+					MasterClient masterClient = new MasterClient(ip, sPort, index, j);
+					toMasters.get(index).add(masterClient);
+				}
+			}	
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	public void AddMasterClient(int group, int index, MasterClient master){
+		
+	}
+	public void PutNewReply(OperateMessage msg){
+		replyMsg.add(msg);
+	}
+	class AcceptThread extends Thread{
+		public AcceptThread(){}
+    	public void run(){
+    		try{
+    			try{
+    	    		while(true){
+    	    			Socket socket = accept();
+    	    			CreateServerThread client = new CreateServerThread(socket);
+    	    			//	servingThread.add(client);
+    	    				client.start();
+    	    		}
+    	    	}catch(IOException e){}
+    	    	finally{
+    	    		close();
+    	    	}
+    		}catch(Exception e){}
+    	}
+	}
+	//msg.getData().get("key").toString();
 	
+	 class CreateServerThread extends Thread{
+	    	Socket client;
+	    	InputStream is;
+	    	ObjectInputStream dis;
+	    	OutputStream outputStream;
+			ObjectOutputStream dos;
+	    	String name;
+	    	
+	    	public CreateServerThread(Socket s) throws IOException{
+	    		client = s;
+	    		try{
+	    			is = s.getInputStream();
+	    			dis = new ObjectInputStream(is);
+	    			outputStream = s.getOutputStream();
+					dos = new ObjectOutputStream(outputStream);
+	    		}catch(Exception e){e.printStackTrace();}
+	    	} 	
+	    	public void run(){
+	    		try{
+	    			while(true){
+	    				Message msg = (Message)dis.readObject(); // receive from client
+	    				String key = (String)msg.getData().get("key");
+	    				int hash = key.hashCode();
+	    				int group = hash % toMasters.size();
+	    				int member = hash % toMasters.get(group).size();
+	    				msg.getData().put("socket", client);
+	    				//
+	    				OperateMessage opMsg = new OperateMessage(OperateMessage.TODO,msg, 0);
+	    				//convert message to operateMessage
+	    				toMasters.get(group).get(member).SendMsg(opMsg);
+	    			}
+	    		}catch(Exception e){}
+	    	}
+	 }
 	
-	class HostConnect extends Thread{
-		private Socket socket;
-		private ObjectInputStream fromclient;
-		private ObjectOutputStream toclient; 
-		public HostConnect(Socket socket)
-		{
-			this.socket = socket;
-			try {
-				fromclient = new ObjectInputStream(socket.getInputStream());
-				toclient = new ObjectOutputStream(socket.getOutputStream());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		@Override
-		public void run() {
-			try {
-				while (true) {
-					// 接收请求
-					Message msg = (Message) fromclient.readObject();
-					System.out.println("Middle :" + msg.getOperation() +" , " + msg.getData());
-					// 求出HASH值
-					int groupIndex = msg.getData().get("key").toString()
-							.hashCode()
-							% groupnum;
-					int seq = OperateMessage.getNextSeq();
-					OperateMessage message = new OperateMessage(OperateMessage.TODO,
-							msg,seq);
-					DatagramPacket packet = PacketHandle.getDatagram(message,groupIndex);
-					if (packet != null) {
-						// 发送到指定组-master
-/*						toMasters.get(serverIndex).SetHostClient(socket);
-						toMasters.get(serverIndex).SendMsg(message);*/
-						
-						groups.get(groupIndex).send(packet);
-					}
-
-					// 接收回应
-					boolean replied = false;
-					while (!replied) {
-						byte[] recvBuf = new byte[5000];
-						packet = new DatagramPacket(recvBuf, recvBuf.length);
-						groups.get(groupIndex).receive(packet);
-						OperateMessage recvmsg = PacketHandle.getMessage(packet,
-								recvBuf);
-						// 判断是否已经
-						// 写回结果
-						if (recvmsg.getType() == OperateMessage.REPLY &&
-								recvmsg.getSeq() == seq){
-							toclient.writeObject(recvmsg.getMsg());
-							toclient.flush();
-							toclient.reset();
-							replied = true;
-						}
-					}
+	class ReplyGuestThread extends Thread{
+		public ReplyGuestThread(){}
+		public void run(){
+			while(replyMsg.size() > 0){
+				OperateMessage opMsg = replyMsg.get(0);
+				Message msg = opMsg.getMsg();
+				Socket socket = (Socket)msg.getData().get("socket");
+				OutputStream outputStream;
+				ObjectOutputStream dos;			
+				try {
+					outputStream = socket.getOutputStream();
+					dos = new ObjectOutputStream(outputStream);
+					dos.writeObject(msg);
+					dos.flush();
+					dos.reset();
+				} catch (Exception e) {
+					System.out.println("send message failure");
+					e.printStackTrace();
 				}
-			} catch (IOException e) {
-				System.out.println("connecting closed !\n");
-				this.stop();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-				this.stop();
+				replyMsg.remove(0);
 			}
 		}
 	}
-	
-	
 }

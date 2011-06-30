@@ -1,13 +1,13 @@
-package Server;
+package Server.model;
 
 public class MemberInfo {
 	private String name;
 	private int status;
 	
-	static int ACTIVE = 1;
-	static int DIED = 2;
-	static int DYING = 3;
-	static int RESTORING = 4;
+	public static int ACTIVE = 1;
+	public static int DIED = 2;
+	public static int DYING = 3;
+	public static int RESTORING = 4;
 	
 	public String getName() {
 		return name;
