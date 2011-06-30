@@ -54,17 +54,17 @@ public class KVS {
     	KVEntity entity1 = dao.kvEntityByKey.get(key);
     	entity1.Print();
     }
-    public void Put(String key, byte[] value){
+    public synchronized void  Put(String key, byte[] value){
     	dao.kvEntityByKey.put(new KVEntity(key, value));
     }
-    public byte[] Get(String key){
+    public synchronized byte[] Get(String key){
     	KVEntity entity = dao.kvEntityByKey.get(key);
     	//entity.Print();
     	return entity.getValue();
     }
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-	public ArrayList<Message> GetAll()
+	public synchronized ArrayList<Message> GetAll()
     {
 		ArrayList<Message> result = new ArrayList<Message>();
 		EntityCursor<KVEntity> cursor = dao.kvEntityByKey.entities();

@@ -1,4 +1,4 @@
-package Client;
+package Interface;
 
 
 import java.io.IOException;
@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import Client.KvsClient;
 import Common.Message;
 
 public class MsgClient {

@@ -5,6 +5,7 @@ import java.io.Serializable;
 import Common.Message;
 
 public class OperateMessage implements Serializable{
+	private static final long serialVersionUID = 1L;
 	public static int REPLY = 1;
 	public static int TODO = 2;
 	public static int BACKUP = 3;

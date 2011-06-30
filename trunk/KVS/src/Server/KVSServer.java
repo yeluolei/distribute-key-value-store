@@ -4,8 +4,6 @@ package Server;
 import java.io.File;
 import java.io.IOException;
 
-import Common.Configure;
-
 
 public class KVSServer {
 	public static KVS kvs;
